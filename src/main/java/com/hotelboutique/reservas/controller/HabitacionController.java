@@ -7,7 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 @RestController
@@ -18,6 +18,7 @@ public class HabitacionController {
     private final HabitacionService habitacionService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Habitacion> crear(@Valid @RequestBody HabitacionRequest request) {
         return ResponseEntity.ok(habitacionService.crear(request));
     }
