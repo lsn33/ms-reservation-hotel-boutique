@@ -6,6 +6,7 @@ import com.hotelboutique.reservas.service.ReservaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,21 +31,25 @@ public class ReservaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ReservaResponse>> listarTodas() {
         return ResponseEntity.ok(reservaService.listarTodas());
     }
 
     @PutMapping("/{id}/checkin")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReservaResponse> checkin(@PathVariable Long id) {
         return ResponseEntity.ok(reservaService.hacerCheckin(id));
     }
 
     @PutMapping("/{id}/checkout")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReservaResponse> checkout(@PathVariable Long id) {
         return ResponseEntity.ok(reservaService.hacerCheckout(id));
     }
 
     @PutMapping("/{id}/cancelar")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReservaResponse> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(reservaService.cancelar(id));
     }

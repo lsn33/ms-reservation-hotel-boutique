@@ -1,21 +1,31 @@
 package com.hotelboutique.reservas.security;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.core.convert.converter.Converter;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
+@EnableMethodSecurity // habilita @PreAuthorize en los controllers
 public class SecurityConfig {
-
-    private final JwtFilter jwtFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -23,30 +33,34 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Catalogo de habitaciones: publico, no requiere login
-                        .requestMatchers(HttpMethod.GET, "/habitaciones/**").permitAll()
-
-                        // Crear/gestionar habitaciones: solo staff del hotel
-                        .requestMatchers(HttpMethod.POST, "/habitaciones").hasRole("ADMIN")
-
-                        // Ver TODAS las reservas (de todos los huespedes): solo ADMIN
-                        .requestMatchers(HttpMethod.GET, "/reservas").hasRole("ADMIN")
-
-                        // Check-in/check-out/cancelar: operaciones de recepcion, solo ADMIN
-                        .requestMatchers(HttpMethod.PUT, "/reservas/*/checkin").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/reservas/*/checkout").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/reservas/*/cancelar").hasRole("ADMIN")
-
-                        // Crear reserva y ver "mis reservas": cualquier usuario autenticado (CLIENTE o ADMIN)
-                        .requestMatchers(HttpMethod.POST, "/reservas").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/reservas/mias").authenticated()
-
+                        .requestMatchers(HttpMethod.GET, "/habitaciones/disponibles").permitAll()
                         .requestMatchers("/h2-console/**").permitAll() // solo para dev con H2
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(cognitoAuthConverter())));
 
         return http.build();
+    }
+
+    // Convierte el token de Cognito: lee "cognito:groups" para los roles,
+    // y usa el claim "email" como el nombre del usuario autenticado (Authentication.getName()).
+    private Converter<Jwt, AbstractAuthenticationToken> cognitoAuthConverter() {
+        JwtGrantedAuthoritiesConverter defaultConverter = new JwtGrantedAuthoritiesConverter();
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setPrincipalClaimName("email");
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> autoridadesBase = defaultConverter.convert(jwt);
+
+            List<String> grupos = jwt.getClaimAsStringList("cognito:groups");
+            Stream<GrantedAuthority> autoridadesDeGrupos = grupos == null
+                    ? Stream.empty()
+                    : grupos.stream().map(grupo -> new SimpleGrantedAuthority("ROLE_" + grupo));
+
+            return Stream.concat(autoridadesBase.stream(), autoridadesDeGrupos).collect(Collectors.toList());
+        });
+
+        return converter;
     }
 }
