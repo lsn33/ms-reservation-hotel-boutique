@@ -21,6 +21,7 @@ public class HabitacionService {
                 .capacidad(request.getCapacidad())
                 .precioPorNoche(request.getPrecioPorNoche())
                 .descripcion(request.getDescripcion())
+                .imagenUrl(request.getImagenUrl())
                 .disponible(true)
                 .build();
 

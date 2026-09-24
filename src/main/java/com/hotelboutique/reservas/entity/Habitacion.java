@@ -39,6 +39,9 @@ public class Habitacion {
 
     private String descripcion;
 
+    @Column(name = "imagen_url")
+    private String imagenUrl;
+
     public enum Tipo {
         INDIVIDUAL,
         DOBLE,
