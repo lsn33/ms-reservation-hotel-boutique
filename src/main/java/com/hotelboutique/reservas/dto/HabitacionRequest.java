@@ -26,4 +26,6 @@ public class HabitacionRequest {
     private BigDecimal precioPorNoche;
 
     private String descripcion;
+
+    private String imagenUrl;
 }
