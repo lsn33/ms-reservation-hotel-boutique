@@ -9,22 +9,17 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Configuration
 @EnableWebSecurity
@@ -43,27 +38,26 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(cognitoAuthConverter())));
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(entraAuthConverter())));
 
         return http.build();
     }
 
-    // Convierte el token de Cognito: lee "cognito:groups" para los roles,
-    // y usa el claim "email" como el nombre del usuario autenticado (Authentication.getName()).
-    private Converter<Jwt, AbstractAuthenticationToken> cognitoAuthConverter() {
-        JwtGrantedAuthoritiesConverter defaultConverter = new JwtGrantedAuthoritiesConverter();
-
+    // Convierte el token de Entra ID: lee "roles" para los roles,
+    // y usa el claim "preferred_username" como el nombre del usuario autenticado.
+    private Converter<Jwt, AbstractAuthenticationToken> entraAuthConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setPrincipalClaimName("email");
+        converter.setPrincipalClaimName("preferred_username");
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Collection<GrantedAuthority> autoridadesBase = defaultConverter.convert(jwt);
+            List<String> roles = jwt.getClaimAsStringList("roles");
 
-            List<String> grupos = jwt.getClaimAsStringList("cognito:groups");
-            Stream<GrantedAuthority> autoridadesDeGrupos = grupos == null
-                    ? Stream.empty()
-                    : grupos.stream().map(grupo -> new SimpleGrantedAuthority("ROLE_" + grupo));
+            if (roles == null || roles.isEmpty()) {
+                return List.of();
+            }
 
-            return Stream.concat(autoridadesBase.stream(), autoridadesDeGrupos).collect(Collectors.toList());
+            return roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toList());
         });
 
         return converter;
