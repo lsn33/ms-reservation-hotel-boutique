@@ -1,19 +1,10 @@
 package com.hotelboutique.reservas.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "habitaciones")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Habitacion {
 
     @Id
@@ -34,7 +25,6 @@ public class Habitacion {
     private BigDecimal precioPorNoche;
 
     @Column(nullable = false)
-    @Builder.Default
     private Boolean disponible = true;
 
     private String descripcion;
@@ -42,10 +32,24 @@ public class Habitacion {
     @Column(name = "imagen_url")
     private String imagenUrl;
 
-    public enum Tipo {
-        INDIVIDUAL,
-        DOBLE,
-        SUITE,
-        FAMILIAR
-    }
+    public Habitacion() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public Tipo getTipo() { return tipo; }
+    public void setTipo(Tipo tipo) { this.tipo = tipo; }
+    public Integer getCapacidad() { return capacidad; }
+    public void setCapacidad(Integer capacidad) { this.capacidad = capacidad; }
+    public BigDecimal getPrecioPorNoche() { return precioPorNoche; }
+    public void setPrecioPorNoche(BigDecimal precioPorNoche) { this.precioPorNoche = precioPorNoche; }
+    public Boolean getDisponible() { return disponible; }
+    public void setDisponible(Boolean disponible) { this.disponible = disponible; }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
+    public enum Tipo { INDIVIDUAL, DOBLE, SUITE, FAMILIAR }
 }

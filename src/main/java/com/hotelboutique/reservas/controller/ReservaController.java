@@ -4,7 +4,6 @@ import com.hotelboutique.reservas.dto.ReservaRequest;
 import com.hotelboutique.reservas.dto.ReservaResponse;
 import com.hotelboutique.reservas.service.ReservaService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -14,10 +13,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/reservas")
-@RequiredArgsConstructor
 public class ReservaController {
 
     private final ReservaService reservaService;
+
+    public ReservaController(ReservaService reservaService) {
+        this.reservaService = reservaService;
+    }
 
     @PostMapping
     public ResponseEntity<ReservaResponse> crear(Authentication auth, @Valid @RequestBody ReservaRequest request) {

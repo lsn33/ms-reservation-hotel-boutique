@@ -6,17 +6,20 @@ import com.hotelboutique.reservas.entity.Habitacion;
 import com.hotelboutique.reservas.entity.Reserva;
 import com.hotelboutique.reservas.repository.HabitacionRepository;
 import com.hotelboutique.reservas.repository.ReservaRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ReservaService {
 
     private final ReservaRepository reservaRepository;
     private final HabitacionRepository habitacionRepository;
+
+    public ReservaService(ReservaRepository reservaRepository, HabitacionRepository habitacionRepository) {
+        this.reservaRepository = reservaRepository;
+        this.habitacionRepository = habitacionRepository;
+    }
 
     public ReservaResponse crear(String usuarioEmail, ReservaRequest request) {
         if (!request.getFechaCheckout().isAfter(request.getFechaCheckin())) {
@@ -34,13 +37,12 @@ public class ReservaService {
             throw new IllegalArgumentException("La habitacion ya esta reservada en esas fechas");
         }
 
-        Reserva reserva = Reserva.builder()
-                .usuarioEmail(usuarioEmail)
-                .habitacion(habitacion)
-                .fechaCheckin(request.getFechaCheckin())
-                .fechaCheckout(request.getFechaCheckout())
-                .estado(Reserva.Estado.CONFIRMADA)
-                .build();
+        Reserva reserva = new Reserva();
+        reserva.setUsuarioEmail(usuarioEmail);
+        reserva.setHabitacion(habitacion);
+        reserva.setFechaCheckin(request.getFechaCheckin());
+        reserva.setFechaCheckout(request.getFechaCheckout());
+        reserva.setEstado(Reserva.Estado.CONFIRMADA);
 
         reservaRepository.save(reserva);
         return ReservaResponse.desde(reserva);
