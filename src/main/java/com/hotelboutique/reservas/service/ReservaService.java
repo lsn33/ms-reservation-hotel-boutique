@@ -4,10 +4,13 @@ import com.hotelboutique.reservas.dto.ReservaRequest;
 import com.hotelboutique.reservas.dto.ReservaResponse;
 import com.hotelboutique.reservas.entity.Habitacion;
 import com.hotelboutique.reservas.entity.Reserva;
+import com.hotelboutique.reservas.event.ReservaEvento;
 import com.hotelboutique.reservas.repository.HabitacionRepository;
 import com.hotelboutique.reservas.repository.ReservaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,7 +20,9 @@ public class ReservaService {
 
     private final ReservaRepository reservaRepository;
     private final HabitacionRepository habitacionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public ReservaResponse crear(String usuarioEmail, ReservaRequest request) {
         if (!request.getFechaCheckout().isAfter(request.getFechaCheckin())) {
             throw new IllegalArgumentException("La fecha de check-out debe ser posterior al check-in");
@@ -43,6 +48,7 @@ public class ReservaService {
                 .build();
 
         reservaRepository.save(reserva);
+        publicarEvento("reserva.creada", reserva);
         return ReservaResponse.desde(reserva);
     }
 
@@ -60,24 +66,38 @@ public class ReservaService {
                 .toList();
     }
 
+    @Transactional
     public ReservaResponse hacerCheckin(Long reservaId) {
-        return cambiarEstado(reservaId, Reserva.Estado.CHECK_IN);
+        return cambiarEstado(reservaId, Reserva.Estado.CHECK_IN, "reserva.checkin");
     }
 
+    @Transactional
     public ReservaResponse hacerCheckout(Long reservaId) {
-        return cambiarEstado(reservaId, Reserva.Estado.CHECK_OUT);
+        return cambiarEstado(reservaId, Reserva.Estado.CHECK_OUT, "reserva.checkout");
     }
 
+    @Transactional
     public ReservaResponse cancelar(Long reservaId) {
-        return cambiarEstado(reservaId, Reserva.Estado.CANCELADA);
+        return cambiarEstado(reservaId, Reserva.Estado.CANCELADA, "reserva.cancelada");
     }
 
-    private ReservaResponse cambiarEstado(Long reservaId, Reserva.Estado nuevoEstado) {
+    private ReservaResponse cambiarEstado(Long reservaId, Reserva.Estado nuevoEstado, String tipoEvento) {
         Reserva reserva = reservaRepository.findById(reservaId)
                 .orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada"));
 
         reserva.setEstado(nuevoEstado);
         reservaRepository.save(reserva);
+        publicarEvento(tipoEvento, reserva);
         return ReservaResponse.desde(reserva);
+    }
+
+    private void publicarEvento(String tipo, Reserva reserva) {
+        eventPublisher.publishEvent(new ReservaEvento(
+                tipo,
+                reserva.getId(),
+                reserva.getUsuarioEmail(),
+                reserva.getFechaCheckin(),
+                reserva.getFechaCheckout()
+        ));
     }
 }
