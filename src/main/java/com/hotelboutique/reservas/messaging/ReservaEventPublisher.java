@@ -13,10 +13,15 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ReservaEventPublisher {
 
+    private static final String ROUTING_COMPROBANTE = "comprobante";
+
     private final RabbitTemplate rabbitTemplate;
 
     @Value("${hotel.messaging.exchanges.eventos}")
     private String exchangeEventos;
+
+    @Value("${hotel.messaging.exchanges.documentos}")
+    private String exchangeDocumentos;
 
     public void publicar(ReservaEvento evento) {
         try {
@@ -25,6 +30,16 @@ public class ReservaEventPublisher {
         } catch (AmqpException ex) {
             log.error("No se pudo publicar el evento {} de la reserva {}: {}",
                     evento.tipo(), evento.reservaId(), ex.getMessage(), ex);
+        }
+    }
+
+    public void publicarComprobante(ReservaEvento evento) {
+        try {
+            rabbitTemplate.convertAndSend(exchangeDocumentos, ROUTING_COMPROBANTE, evento);
+            log.info("Comprobante solicitado para la reserva {}", evento.reservaId());
+        } catch (AmqpException ex) {
+            log.error("No se pudo solicitar el comprobante de la reserva {}: {}",
+                    evento.reservaId(), ex.getMessage(), ex);
         }
     }
 }
