@@ -111,6 +111,8 @@ public class RabbitTopologyConfig {
         return QueueBuilder.durable(nombre)
                 .withArgument("x-dead-letter-exchange", props.dlx())
                 .withArgument("x-dead-letter-routing-key", nombre + SUFIJO_DLQ)
+                .withArgument("x-max-length", props.retencion().maxLength())
+                .withArgument("x-message-ttl", props.retencion().ttlMs())
                 .build();
     }
 

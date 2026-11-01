@@ -2,41 +2,60 @@ package com.hotelboutique.reservas.messaging;
 
 import com.hotelboutique.reservas.event.ReservaEvento;
 import com.hotelboutique.reservas.service.DocumentoService;
+import com.rabbitmq.client.Channel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentoConsumerTest {
 
     @Mock private DocumentoService documentoService;
+    @Mock private Channel channel;
     @InjectMocks private DocumentoConsumer consumer;
 
-    private final ReservaEvento evento = new ReservaEvento(
-            "reserva.checkout", 1L, "prueba@hotel.cl",
-            LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3));
-
-    @Test
-    void procesaElEventoGenerandoComprobante() {
-        consumer.onComprobante(evento);
-
-        verify(documentoService).generarComprobante(evento);
+    private ReservaEvento evento(String usuarioEmail) {
+        return new ReservaEvento("reserva.checkout", 1L, usuarioEmail,
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3));
     }
 
     @Test
-    void errorRechazaSinRequeueParaQueVayaADlq() {
-        doThrow(new RuntimeException("falla de base de datos"))
+    void procesaYConfirmaConAck() throws Exception {
+        ReservaEvento evento = evento("prueba@hotel.cl");
+
+        consumer.onComprobante(evento, channel, 1L);
+
+        verify(documentoService).generarComprobante(evento);
+        verify(channel).basicAck(1L, false);
+    }
+
+    @Test
+    void datosInvalidosHacenNackSinRequeue() throws Exception {
+        consumer.onComprobante(evento(null), channel, 7L);
+
+        verify(channel).basicNack(7L, false, false);
+        verifyNoInteractions(documentoService);
+    }
+
+    @Test
+    void errorRecuperableSePropagaSinConfirmar() throws Exception {
+        ReservaEvento evento = evento("prueba@hotel.cl");
+        doThrow(new RuntimeException("base de datos no disponible"))
                 .when(documentoService).generarComprobante(evento);
 
-        assertThatThrownBy(() -> consumer.onComprobante(evento))
-                .isInstanceOf(AmqpRejectAndDontRequeueException.class);
+        assertThatThrownBy(() -> consumer.onComprobante(evento, channel, 3L))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(channel, never()).basicAck(anyLong(), anyBoolean());
+        verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
     }
 }
