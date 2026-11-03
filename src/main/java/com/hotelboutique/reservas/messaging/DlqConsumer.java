@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class DlqConsumer {
 
-    @RabbitListener(queues = "${hotel.messaging.dlq.notificaciones}")
+    // @RabbitListener(queues = "${hotel.messaging.dlq.notificaciones}")
     public void onNotificacionesDlq(Message mensaje, Channel channel,
                                     @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         registrar("q.notificaciones.dlq", mensaje, channel, tag);
