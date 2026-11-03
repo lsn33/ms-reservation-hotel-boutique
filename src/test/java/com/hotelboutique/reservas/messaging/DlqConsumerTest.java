@@ -16,15 +16,6 @@ class DlqConsumerTest {
     }
 
     @Test
-    void registraYConfirmaMensajeDeNotificacionesDlq() throws Exception {
-        Channel channel = mock(Channel.class);
-
-        new DlqConsumer().onNotificacionesDlq(mensaje("{\"tipo\":\"reserva.creada\"}"), channel, 4L);
-
-        verify(channel).basicAck(4L, false);
-    }
-
-    @Test
     void registraYConfirmaMensajeDeTicketsDlq() throws Exception {
         Channel channel = mock(Channel.class);
 
