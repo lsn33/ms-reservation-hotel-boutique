@@ -78,3 +78,4 @@ class TicketConsumerTest {
         verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
     }
 }
+// d
