@@ -10,6 +10,6 @@ public class RabbitMessagingConfig {
 
     @Bean
     public MessageConverter messageConverter() {
-        return new JacksonJsonMessageConverter();
+        return new JacksonJsonMessageConverter("com.hotelboutique.reservas.event");
     }
 }
