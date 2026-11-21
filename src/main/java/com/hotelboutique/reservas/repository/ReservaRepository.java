@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
@@ -25,4 +26,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
             @Param("fechaCheckout") LocalDate fechaCheckout,
             @Param("estadoCancelada") Reserva.Estado estadoCancelada
     );
+
+    /** Id de la habitacion de una reserva (consulta directa: no depende de relaciones lazy fuera de transaccion). */
+    @Query("SELECT r.habitacion.id FROM Reserva r WHERE r.id = :reservaId")
+    Optional<Long> buscarHabitacionId(@Param("reservaId") Long reservaId);
 }
